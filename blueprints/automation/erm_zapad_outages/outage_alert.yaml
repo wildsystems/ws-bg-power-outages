@@ -1,0 +1,93 @@
+blueprint:
+  name: ERM Zapad planned outage alert
+  description: >-
+    Notifies when ERM Zapad publishes a planned outage for the client number or place and again
+    in the evening before the outage day. In the notification actions use {{ title }} and
+    {{ message }}.
+  domain: automation
+  # yamllint disable-line rule:line-length
+  source_url: https://github.com/wildsystems/ws-erm-zapad-outages/blob/main/blueprints/automation/erm_zapad_outages/outage_alert.yaml
+  input:
+    new_outage_entity:
+      name: New outage event
+      selector:
+        entity:
+          filter:
+            - integration: erm_zapad_outages
+              domain: event
+    tomorrow_entity:
+      name: Outage tomorrow sensor
+      selector:
+        entity:
+          filter:
+            - integration: erm_zapad_outages
+              domain: binary_sensor
+    reminder_time:
+      name: Evening reminder time
+      default: "19:00:00"
+      selector:
+        time: {}
+    notify_actions:
+      name: Notification actions
+      description: >-
+        e.g. notify.mobile_app_<phone> with title: "{{ title }}" and message: "{{ message }}"
+      default:
+        - action: persistent_notification.create
+          data:
+            notification_id: "erm_zapad_outage_{{ trigger.id }}"
+            title: "{{ title }}"
+            message: "{{ message }}"
+      selector:
+        action: {}
+
+mode: queued
+
+triggers:
+  - trigger: state
+    entity_id: !input new_outage_entity
+    not_from:
+      - unavailable
+      - unknown
+    id: published
+  - trigger: time
+    at: !input reminder_time
+    id: evening
+
+variables:
+  tomorrow_entity: !input tomorrow_entity
+  # 'published': only a freshly fired event; a state restored after a restart or an unavailable
+  # period carries an old timestamp and is ignored. Text from the schedules is stripped of
+  # Markdown link characters, as notifications may render Markdown.
+  items: >-
+    {%- if trigger.id == 'published' -%}
+      {%- set s = trigger.to_state -%}
+      {%- if s is not none and s.state not in ['unknown', 'unavailable']
+            and s.attributes.event_type == 'published'
+            and (now() - as_datetime(s.state)).total_seconds() < 300 -%}
+        {{ s.attributes.outages | default([]) }}
+      {%- else -%}
+        {{ [] }}
+      {%- endif -%}
+    {%- else -%}
+      {{ state_attr(tomorrow_entity, 'outages') or [] }}
+    {%- endif -%}
+  title: >-
+    {{ 'Утре: планирано прекъсване на тока' if trigger.id == 'evening'
+       else 'ЕРМ Запад: ново планирано прекъсване' }}
+  message: |-
+    {% for o in items -%}
+    {%- set end = as_datetime(o.end).strftime('%H:%M') if o.end else '?' -%}
+    {%- set place = o.place | regex_replace('[\\[\\]()<>]', '') -%}
+    {%- set district = ' (общ. ' ~ o.district | regex_replace('[\\[\\]()<>]', '') ~ ')'
+          if o.district else '' -%}
+    {{ as_datetime(o.start).strftime('%d.%m %H:%M') }} – {{ end }} {{ place }}{{ district }}
+    {% endfor -%}
+    {%- if items | rejectattr('point', 'defined') | list | count > 0 -%}
+    Индикативно: засяга част от мястото, не непременно вашия адрес.
+    {%- endif -%}
+
+conditions:
+  - condition: template
+    value_template: "{{ items | count > 0 }}"
+
+actions: !input notify_actions

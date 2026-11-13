@@ -1,0 +1,32 @@
+# Settings for the development checks only; the integration itself is not a Python package.
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["custom_components"]
+
+[tool.ruff.lint]
+select = [
+  "E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC", "PL", "S", "PIE", "RET", "C4",
+  "DTZ", "PTH", "BLE", "G", "LOG", "T20", "ERA",
+]
+ignore = [
+  "RUF001", "RUF002", "RUF003", # Cyrillic text and typographic dashes are intended
+  "RUF012",  # class attributes such as _attr_event_types follow the HA style
+  "PLR2004", # magic values in comparisons
+  "PLR0912", # branch count of the PDF parser
+]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+ignore_missing_imports = true
+follow_imports = "silent"
+explicit_package_bases = true
+mypy_path = "custom_components"
+
+# Home Assistant 2026.11+ types its flow helpers with probatio and aliases voluptuous to it at
+# start-up; voluptuous schemas are still accepted at runtime (and required before 2026.11).
+[[tool.mypy.overrides]]
+module = "erm_zapad_outages.config_flow"
+disable_error_code = ["arg-type"]
