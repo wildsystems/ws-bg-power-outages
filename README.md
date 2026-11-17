@@ -47,11 +47,12 @@ show a placeholder icon, as HACS does not read bundled icons yet.
 
 ### Upgrading from ERM Zapad power outages (0.1.x)
 
-The integration was renamed from `erm_zapad_outages` to `bg_power_outages`. Home Assistant treats
-it as a new integration: remove the old entries and the old `custom_components/erm_zapad_outages/`
-folder, then add the entries again. Entity IDs are derived from the entry names as before, so
-they usually come out the same; automations that filter on the integration or use the old
-blueprint need the new blueprint.
+The integration was renamed from `erm_zapad_outages` to `bg_power_outages`, and Home Assistant
+treats it as a new integration. Delete the old entries, remove the old integration, install 0.2.0
+and add the entries again with the same values; the entity IDs then stay the same. Do not just
+press **Update** in HACS, as that leaves the old integration installed. Then replace the alert
+blueprint. The steps are in [docs/upgrade-0.2.md](docs/upgrade-0.2.md), and the changes in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Configuration
 
@@ -90,20 +91,30 @@ have changed is kept; entity IDs do not change.
 
 | entity | state | attributes |
 |---|---|---|
-| `calendar.<name>_planned_outages` | on during an outage | events for the current and the known following outages |
+| `calendar.<name>_planned_outages` | on while the current or next outage lasts (see [Calendar events](#calendar-events)) | `message`, `description`, `location`, `start_time`, `end_time` of that outage |
 | `binary_sensor.<name>_outage_now` | on while an outage is in progress (see below) | `kind`, `start`, `expected_end`, `point` or `place` |
 | `binary_sensor.<name>_outage_tomorrow` | on if an outage is scheduled tomorrow | `outages` |
 | `sensor.<name>_next_outage` | time window of the next or current outage, e.g. `13.11 07:00–17:00`; `?` for an unknown end; `—` if none | the outage's fields, `upcoming` |
 | `sensor.<name>_next_outage_start` | start of the next or current outage (timestamp) | |
 | `sensor.<name>_next_outage_end` | end of the next or current outage (timestamp); unknown if not announced | |
-| `event.<name>_new_outage_published` | fired when a new planned outage appears | `event_type: published`, `outages` |
+| `event.<name>_new_outage_published` | time of the last event, fired when a new or changed planned outage appears | `event_type: published`, `outages` |
 
-`outage_now` exists only where the operator reports outages registered right now: ЕРМ Запад by
-client number (on while ЕРМ Запад has an outage registered for it, planned or unplanned), ЕРМ
-Запад by place with a municipality, and Електроразпределение Юг. By place it is on while an
-unplanned outage matching the place is registered, or while the time window of a matching planned
-outage lasts. Електроразпределение Север entries and ЕРМ Запад places without a municipality have
-no `outage_now`: a planned schedule alone does not say whether the power is off.
+Every entry has all of these entities except `outage_now`. The table shows which entries have
+`outage_now`, which outages they show and how often they are checked:
+
+| entry | `outage_now` | outages shown | checked every |
+|---|---|---|---|
+| ЕРМ Запад, by client number | yes | planned (known 48 hours ahead), unplanned | 30 min; planned 3 h |
+| ЕРМ Запад, by place with municipality | yes | planned, unplanned | 30 min; planned 3 h |
+| ЕРМ Запад, by place without municipality | — | planned | 3 h |
+| Електроразпределение Юг | yes | planned, unplanned | 30 min; planned 3 h |
+| Електроразпределение Север | — | planned, possible | 3 h |
+
+`outage_now` exists only where the operator reports outages registered right now. By client number
+it is on while ЕРМ Запад has an outage registered for it, planned or unplanned. By place it is on
+while an unplanned outage matching the place is registered, or while the time window of a matching
+planned outage lasts. The other entries have no `outage_now`, because a planned schedule alone does
+not say whether the power is off.
 
 Each outage is `{place, district, oblast, start, end, kind}` with ISO 8601 times (Europe/Sofia);
 client-number outages add `point` (metering point) and have empty `district`/`oblast`. For
@@ -120,15 +131,97 @@ client-number outages add `point` (metering point) and have empty `district`/`ob
 A published period with daily hours ("16.11–20.11, 09:00–17:00") becomes one outage per day, for
 at most 31 days.
 
-The event is not fired for outages already known when Home Assistant starts, nor for unplanned
-outages (use `outage_now` for those).
-
 The `upcoming` and `outages` lists hold at most 20 outages. They and `point` are not stored in the
-recorder history.
+recorder history, but they are in the state, so triggers and templates can read them.
+
+### Calendar events
+
+Each outage becomes one event:
+
+| field | content |
+|---|---|
+| `summary` | `Планирано прекъсване на тока`, `Непланирано прекъсване на тока` or `Възможни смущения в захранването` (by `kind`), then ` – ` and the place, cut to 60 characters |
+| `description` | by client number: `Точка на измерване <point>.`; by place: the full place or area description, a note that the outage may affect only part of it, and the operator's name and page. Without an announced end, `Очакваното време за възстановяване не е обявено.` is added |
+| `location` | by client number: the address of the metering points; by place: the place (cut to 60 characters), `общ. <municipality>` and `обл. <province>` when known |
+| `start` | start of the outage |
+| `end` | the announced end. Without one, a placeholder: one hour after the start or, once the start has passed, one hour from now, so it keeps moving forward |
+
+Because of this placeholder:
+
+- the calendar stays on until the operator stops listing an outage without an announced end;
+- a calendar trigger with `event: end` does not fire for such an outage. Its end is always ahead,
+  and once the operator stops listing the outage, its event is removed. Use `outage_now`;
+- when a restore time is announced, the event ends at that time.
+
+A calendar trigger with `event: start` fires only for outages that are known before they start, so
+not for unplanned ones: they are registered after they begin, and Електроразпределение Юг dates
+them from midnight. The kind can be checked in the summary, e.g.
+`trigger.calendar_event.summary.startswith('Планирано')`.
+
+### Next outage sensors
+
+`next_outage`, `next_outage_start` and `next_outage_end` show the outage with the earliest start
+among those that have not ended yet, meaning their end is in the future or not announced. In
+practice:
+
+- During an outage they show that outage until its announced end. Within a minute after that end
+  they switch to the following outage, without waiting for a refresh. They use the announced end,
+  not the actual restore, which the integration cannot see.
+- An outage without an announced end stays until the operator no longer lists it. For unplanned
+  outages this is noticed at the next 30-minute check.
+- When the operator announces or changes the restore time of a listed outage, `next_outage_end`
+  changes from unknown to that time, or to the new time, at the next check: within 30 minutes for
+  outages registered right now, within 3 hours for planned ones. Електроразпределение Юг has so far
+  not been seen announcing it for unplanned outages.
+- `next_outage_end` is unknown both when there is no outage and when the end is not announced.
+  To tell the two apart, check `next_outage_start` (unknown only when there is no outage) or
+  `next_outage` (`—` when there is no outage).
+
+### New outage event
+
+The event entity has one event type, `published`. It fires when a refresh finds planned outages
+that were not in the previous successful refresh, and its `outages` attribute lists them. The
+entity's state is the time of the last event. `event_type` and `outages` are attributes of that
+state, so a state trigger reads them as `trigger.to_state.attributes.outages`.
+
+- An outage counts as new if any of its fields differs from the previous refresh. So a known
+  outage with a new start, end or description fires the event again, and only its new version is
+  listed. A cancelled outage just disappears, and no event is fired for it.
+- The first successful refresh after Home Assistant starts, or after the entry is reloaded or
+  reconfigured, only records what is published; no event is fired for those outages.
+- Unplanned outages do not fire it (use `outage_now`). `possible` outages (Електроразпределение
+  Север) do.
+- Like every event entity, it restores its last event (time and attributes) after a restart or a
+  reload. Its state then changes from `unavailable` to the time of that old event, and the same
+  happens when it becomes available again after failed refreshes. A state trigger fires on such a
+  change, so check that the event is recent rather than excluding `unavailable` (a new event can
+  arrive just as the entity becomes available again) or `unknown` (the state before the very first
+  event); see the [example](docs/automations.md#new-outage-published).
+
+### Availability
 
 When a refresh fails, the entities keep showing the last data for up to 12 hours and then become
 unavailable. `outage_now` is the exception: it is unavailable as soon as a check fails, because
 an old answer says nothing about the power right now.
+
+So an outage can end as `on → unavailable → off`, and an outage that ends while Home Assistant
+restarts gives no `on → off` either. A trigger `from: "on"` `to: "off"` misses these. Dropping
+`from` does not help, because `off → unavailable → off` would then look like a restore. The
+[example](docs/automations.md#outage-started-or-ended) keeps the last known state in a template
+binary sensor.
+
+### Times and time zones
+
+- Times in attributes (`start`, `end`, `expected_end` and the items of `outages` and `upcoming`)
+  are ISO 8601 strings in Europe/Sofia time with its offset, e.g. `2026-11-13T07:00:00+02:00`.
+  `as_datetime()` keeps the offset, so `strftime()` shows Sofia time; add `| as_local` to show
+  them in Home Assistant's time zone when it is not Europe/Sofia.
+- The states of `next_outage_start`, `next_outage_end` and the event entity are timestamps. Home
+  Assistant keeps them in UTC, e.g. `2026-11-13T05:00:00+00:00`. Dashboards show them in local
+  time, but in templates convert them:
+  `states('sensor.<name>_next_outage_start') | as_datetime | as_local`.
+- The `next_outage` text (`13.11 07:00–17:00`) is in Sofia time.
+- Comparisons such as `now() < as_datetime(...)` are correct in any time zone.
 
 ## Polling and request limits
 
@@ -171,7 +264,9 @@ Then create an automation from it and set the notification actions, using `{{ ti
     message: "{{ message }}"
 ```
 
-A calendar trigger works as well, e.g. `trigger: calendar`, `event: start`, `offset: "-12:00:00"`.
+[docs/automations.md](docs/automations.md) has YAML examples that you can copy and adapt: a new
+outage is published, an outage starts or ends, a restore time is announced, and a reminder from
+the calendar.
 
 ## Limitations
 
