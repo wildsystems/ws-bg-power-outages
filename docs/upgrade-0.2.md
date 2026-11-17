@@ -1,22 +1,22 @@
-# Upgrading from 0.1.x to 0.2.0
+# Moving from ERM Zapad power outages 0.1.x to Bulgaria power outages 0.2.0
 
-In 0.2.0 the integration was renamed from **ERM Zapad power outages** (`erm_zapad_outages`) to
-**Bulgaria power outages** (`bg_power_outages`), and the repository moved from
-`wildsystems/ws-erm-zapad-outages` to `wildsystems/ws-bg-power-outages`. Home Assistant treats the
-renamed integration as a new one: it does not take over the existing entries. Remove them and add
-them again. With the same values, the new entities get the same entity IDs.
+**Bulgaria power outages** (`bg_power_outages`, this repository) continues **ERM Zapad power
+outages** (`erm_zapad_outages`) from the repository
+[wildsystems/ws-erm-zapad-outages](https://github.com/wildsystems/ws-erm-zapad-outages). The old
+repository is no longer maintained. Its last version, 0.1.1, works as 0.1.0 and shows a repair
+under Settings → Repairs that points here.
 
-> **Do not press Update in HACS.** HACS would install 0.2.0 into a new `bg_power_outages/` folder
-> and leave the old `erm_zapad_outages/` folder in place, so Home Assistant would keep loading the
-> old integration too. Follow the steps below instead. If you have already updated, see
-> [step 3](#3-install-020).
+The two are separate integrations in separate repositories. An update of the old one never
+installs this one, and this one does not take over the old entries. Uninstall the old integration,
+install this one and add the entries again. With the same values, the new entities get the same
+entity IDs.
 
-The upgrade takes about 10 minutes and one restart. The full list of changes is in the
+The move takes about 10 minutes and one restart. The full list of changes is in the
 [changelog](../CHANGELOG.md).
 
 ## What carries over and what does not
 
-| | after the upgrade |
+| | after the move |
 |---|---|
 | entity IDs | the same, if each entry is added again with the same values and the old entities were deleted first |
 | history of the entities | kept: the recorder stores history by entity ID, so the graphs continue |
@@ -39,30 +39,35 @@ outages), write down:
 ## 2. Delete the old entries
 
 Delete every ERM Zapad power outages entry: **⋮ → Delete**. Its device and entities are removed,
-which frees their entity IDs for the new entries. Do this before installing 0.2.0. If an old
-entity is still registered when the new entry is added, the new entity gets a suffix, such as
+which frees their entity IDs for the new entries. Do this before adding the new entries. If an
+old entity is still registered when the new entry is added, the new entity gets a suffix, such as
 `sensor.zlatusha_next_outage_2`.
 
 Automations and dashboards that use the entities show them as unavailable until step 4.
 
-## 3. Install 0.2.0
+## 3. Replace the integration
 
-### HACS
+Home Assistant 2026.11 replaced HACS with the built-in **Marketplace** (Settings → Marketplace)
+and moved what HACS had installed into it. Use the part for your version.
+
+### Marketplace (Home Assistant 2026.11 and newer)
+
+1. Settings → **Marketplace** → **ERM Zapad power outages** → **⋮ → Uninstall**. This deletes
+   `custom_components/erm_zapad_outages/`. The Marketplace refuses while an entry of the
+   integration is still set up: delete the entries first (step 2).
+2. Settings → Marketplace → **Add from link** → `https://github.com/wildsystems/ws-bg-power-outages`.
+3. Install **Bulgaria power outages** and restart Home Assistant. A repair under Settings →
+   Repairs offers the restart.
+
+### HACS (Home Assistant 2026.10 and older)
 
 1. HACS → **ERM Zapad power outages** → **⋮ → Remove**. This deletes
    `custom_components/erm_zapad_outages/`.
-2. Download the integration again: HACS → search **Bulgaria power outages** or **ERM Zapad power
-   outages**. If the repository is no longer listed, add it again: HACS → ⋮ → **Custom
-   repositories** → `https://github.com/wildsystems/ws-bg-power-outages`, type **Integration**.
-3. Download version 0.2.0 and restart Home Assistant.
+2. HACS → ⋮ → **Custom repositories** → `https://github.com/wildsystems/ws-bg-power-outages`,
+   type **Integration**.
+3. Download **Bulgaria power outages** and restart Home Assistant.
 
-Do not use **Update** for this upgrade. HACS installs 0.2.0 into the new
-`custom_components/bg_power_outages/` folder but leaves the old `erm_zapad_outages/` folder in
-place, so Home Assistant would keep loading the old integration too. If you already updated this
-way, delete `custom_components/erm_zapad_outages/` (Samba, SSH or a file editor add-on) and
-restart.
-
-The old repository URL keeps working: GitHub redirects it, and HACS follows the new name.
+You can also remove the old repository from the custom repositories; it gets no more updates.
 
 ### Manual
 
@@ -74,6 +79,9 @@ to `<config>/custom_components/` and restart Home Assistant.
 Settings → Devices & services must not show ERM Zapad power outages any more. An entry that was
 not deleted in step 2 is shown there as not loaded; delete it now. Home Assistant deletes it even
 though the integration is gone.
+
+If you install Bulgaria power outages without uninstalling ERM Zapad power outages, both run side
+by side: the old entries keep polling ЕРМ Запад and count against its request limit.
 
 ## 4. Add the entries again
 
@@ -93,9 +101,9 @@ Then:
 
 Skip this step if you do not use the blueprint.
 
-The blueprint moved to `blueprints/automation/bg_power_outages/outage_alert.yaml`. Its old
-location no longer exists, so a re-import from the old source URL fails. Import it from the new
-location:
+The blueprint of this repository is at `blueprints/automation/bg_power_outages/outage_alert.yaml`.
+Do not re-import the old blueprint from its source URL: that brings back the 0.1 version, which
+selects entities of the old integration. Import the new one:
 
 [![Open your Home Assistant instance and show the blueprint import dialog.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fwildsystems%2Fws-bg-power-outages%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fbg_power_outages%2Foutage_alert.yaml)
 
@@ -133,9 +141,10 @@ Most automations need no change. Check yours if they rely on the following.
 - **Repair issues** are titled `ЕРМ Запад answer not understood (…)` instead of `ERM Zapad answer
   not understood (…)`.
 
-## Going back to 0.1.0
+## Going back
 
-Delete the Bulgaria power outages entries, then in HACS remove the integration and download
-version 0.1.0 of the repository again (or copy `custom_components/erm_zapad_outages/` from the
-`v0.1.0` tag), restart, and add the entries again. The 0.1.0 blueprint is in the `v0.1.0` tag at
-`blueprints/automation/erm_zapad_outages/outage_alert.yaml`.
+Delete the Bulgaria power outages entries and uninstall it (Marketplace **⋮ → Uninstall**, HACS
+**⋮ → Remove**). Install ERM Zapad power outages again from
+`https://github.com/wildsystems/ws-erm-zapad-outages` the same way as in step 3, restart, and add
+the entries again. Its blueprint is at `blueprints/automation/erm_zapad_outages/outage_alert.yaml`
+in that repository.

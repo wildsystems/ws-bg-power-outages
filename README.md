@@ -26,13 +26,19 @@ The endpoints are undocumented and may change without notice. The small operator
 
 ## Installation
 
-### HACS
+### Marketplace or HACS
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=wildsystems&repository=ws-bg-power-outages&category=integration)
 
-Or manually: HACS → ⋮ → **Custom repositories** → repository
-`https://github.com/wildsystems/ws-bg-power-outages`, type **Integration**. Then download
-**Bulgaria power outages** and restart Home Assistant.
+The button opens the repository in the Marketplace on Home Assistant 2026.11 and newer, and in
+HACS on older versions. Or add it yourself:
+
+- **Marketplace** (Home Assistant 2026.11 and newer, Settings → Marketplace): **Add from link** →
+  `https://github.com/wildsystems/ws-bg-power-outages`. Then install **Bulgaria power outages** and
+  restart Home Assistant.
+- **HACS** (Home Assistant 2026.10 and older): HACS → ⋮ → **Custom repositories** → repository
+  `https://github.com/wildsystems/ws-bg-power-outages`, type **Integration**. Then download
+  **Bulgaria power outages** and restart Home Assistant.
 
 ### Manual
 
@@ -47,12 +53,13 @@ show a placeholder icon, as HACS does not read bundled icons yet.
 
 ### Upgrading from ERM Zapad power outages (0.1.x)
 
-The integration was renamed from `erm_zapad_outages` to `bg_power_outages`, and Home Assistant
-treats it as a new integration. Delete the old entries, remove the old integration, install 0.2.0
-and add the entries again with the same values; the entity IDs then stay the same. Do not just
-press **Update** in HACS, as that leaves the old integration installed. Then replace the alert
-blueprint. The steps are in [docs/upgrade-0.2.md](docs/upgrade-0.2.md), and the changes in
-[CHANGELOG.md](CHANGELOG.md).
+This integration continues ERM Zapad power outages (`erm_zapad_outages`) from
+[wildsystems/ws-erm-zapad-outages](https://github.com/wildsystems/ws-erm-zapad-outages), which is
+no longer maintained. Home Assistant treats it as a new integration and does not take over the old
+entries. Delete the old entries, uninstall ERM Zapad power outages, install Bulgaria power outages
+and add the entries again with the same values; the entity IDs then stay the same. Then replace
+the alert blueprint. The steps are in [docs/upgrade-0.2.md](docs/upgrade-0.2.md), and the changes
+in [CHANGELOG.md](CHANGELOG.md).
 
 ## Configuration
 
@@ -249,8 +256,8 @@ An HTTP 429 answer from any operator also stops requests to it for one hour.
 
 `blueprints/automation/bg_power_outages/outage_alert.yaml` notifies when a new outage is published
 and again at a chosen evening time (default 19:00) before the outage day. The title names the
-operator and the device (place or address); long area descriptions are shortened. HACS installs
-only the integration; import the blueprint separately:
+operator and the device (place or address); long area descriptions are shortened. The
+Marketplace and HACS install only the integration; import the blueprint separately:
 
 [![Open your Home Assistant instance and show the blueprint import dialog.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fwildsystems%2Fws-bg-power-outages%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fbg_power_outages%2Foutage_alert.yaml)
 

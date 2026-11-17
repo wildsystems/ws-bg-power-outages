@@ -2,16 +2,17 @@
 
 ## 0.2.0
 
-The integration now covers three Bulgarian distribution operators and is renamed from **ERM Zapad
-power outages** (`erm_zapad_outages`) to **Bulgaria power outages** (`bg_power_outages`). The
-repository moves from `wildsystems/ws-erm-zapad-outages` to `wildsystems/ws-bg-power-outages`.
+The integration now covers three Bulgarian distribution operators and continues **ERM Zapad power
+outages** (`erm_zapad_outages`) as **Bulgaria power outages** (`bg_power_outages`), in the new
+repository `wildsystems/ws-bg-power-outages`. The old repository `wildsystems/ws-erm-zapad-outages`
+is no longer maintained; its last version, 0.1.1, shows a repair that points here.
 
-> **Breaking – do not press Update in HACS.** HACS would install 0.2.0 into a new
-> `bg_power_outages/` folder and leave the old `erm_zapad_outages/` folder in place, so Home
-> Assistant would keep loading the old integration too. Home Assistant sees the renamed integration
-> as a new one: existing entries are not taken over, they have to be added again, and the alert
-> blueprint has to be imported again. Follow [docs/upgrade-0.2.md](docs/upgrade-0.2.md). If you
-> have already updated, delete `custom_components/erm_zapad_outages/` and restart.
+> **Breaking – a new integration, not an update.** Home Assistant sees Bulgaria power outages as a
+> new integration: existing entries are not taken over, they have to be added again, and the alert
+> blueprint has to be imported again. Delete the old entries, uninstall ERM Zapad power outages,
+> add this repository (Marketplace **Add from link**, or HACS **Custom repositories** on Home
+> Assistant 2026.10 and older) and install Bulgaria power outages. Follow
+> [docs/upgrade-0.2.md](docs/upgrade-0.2.md).
 
 ### Added
 
