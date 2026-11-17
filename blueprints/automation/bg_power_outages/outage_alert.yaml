@@ -46,9 +46,6 @@ mode: queued
 triggers:
   - trigger: state
     entity_id: !input new_outage_entity
-    not_from:
-      - unavailable
-      - unknown
     id: published
   - trigger: time
     at: !input reminder_time
@@ -58,7 +55,9 @@ variables:
   tomorrow_entity: !input tomorrow_entity
   source_entity: "{{ trigger.entity_id if trigger.id == 'published' else tomorrow_entity }}"
   # 'published': only a freshly fired event; a state restored after a restart or an unavailable
-  # period carries an old timestamp and is ignored. Text from the schedules is stripped of
+  # period carries an old timestamp and is ignored. The trigger does not exclude 'unknown' (the
+  # state before the first event) or 'unavailable' (a new event can arrive with the entity
+  # becoming available again). Text from the schedules is stripped of
   # Markdown link characters, as notifications may render Markdown.
   items: >-
     {%- if trigger.id == 'published' -%}
