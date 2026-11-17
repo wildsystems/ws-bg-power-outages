@@ -8,7 +8,8 @@ from typing import Any, cast
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.const import EVENT_HOMEASSISTANT_CLOSE
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -51,7 +52,17 @@ def get_client(hass: HomeAssistant, operator: str) -> OperatorClient:
     """One client per operator and HA instance: shared downloads, one request at a time."""
     clients = hass.data.setdefault(DATA_CLIENTS, {})
     if (client := clients.get(operator)) is None:
-        session = async_create_clientsession(hass, cookie_jar=aiohttp.DummyCookieJar())
+        # The client outlives the entry that creates it, so the session must not be tied to that
+        # entry (auto_cleanup would close it when the entry unloads): it is closed with HA.
+        session = async_create_clientsession(
+            hass, auto_cleanup=False, cookie_jar=aiohttp.DummyCookieJar()
+        )
+
+        @callback
+        def _detach(_event: Event) -> None:
+            session.detach()
+
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, _detach)
         client = OPERATORS[operator].client_class(session, hass.async_add_executor_job)
         clients[operator] = client
     return client
