@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1
+
+### Fixed
+
+- ЕРМ Запад by client number: valid numbers were rejected as unknown
+  ([#3](https://github.com/wildsystems/ws-bg-power-outages/issues/3)). The point check of ЕРМ Запад
+  lists no metering points for many valid numbers and cannot tell an unknown number apart, so the
+  number is now accepted; the device name is then the masked number without an address.
+
 ## 0.2.0
 
 The integration now covers three Bulgarian distribution operators and continues **ERM Zapad power
