@@ -75,7 +75,7 @@ Choose **By client number** or **By place**.
 
 | mode | field | example | meaning |
 |---|---|---|---|
-| client number | Client number | `300000000000` | 12 digits from the electricity bill. The address of its metering points, with the number masked, becomes the device name, e.g. `Златуша (…0000)` |
+| client number | Client number | `300000000000` | 12 digits from the electricity bill. ЕРМ Запад does not confirm that a number exists, so a mistyped number is accepted and simply never shows an outage. The address of its metering points, with the number masked, becomes the device name, e.g. `Златуша (…0000)`; ЕРМ Запад lists the address only for some numbers, otherwise the name is just `…0000` |
 | place | Place | `ЗЛАТУША` | place name as written in the schedules; case-insensitive substring match |
 | place | Municipality / Sofia district | `БОЖУРИЩЕ` | optional; narrows the match when the name exists in several municipalities. For Sofia it is the district (`ВРЪБНИЦА`, `ОВЧА КУПЕЛ`). Needed for unplanned outages by place |
 

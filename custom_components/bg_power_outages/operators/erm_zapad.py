@@ -8,7 +8,9 @@ Undocumented endpoints of https://info.ermzapad.bg/webint/vok/avplan.php (POST u
                                          registered right now
   action=showpdf                      -> HTML list of daily PDFs, previewdoc(<id>) + date badge
   action=showdocid&doc_id=<id>        -> PDF "Планирани прекъсвания за DD.MM.YYYY" (by place)
-  action=chkca&itn=<client number>    -> JSON {"cnt": n, "ca": ["<32Z… point> <address>", …]}
+  action=chkca&itn=<client number>    -> JSON {"cnt": n, "ca": ["<32Z… point> <address>", …]};
+                                         cnt 0 for valid numbers too, the site then just uses
+                                         the number. No endpoint tells an unknown number apart.
   action=viewitn&itn=<client number>  -> HTML, outage registered right now (planned or unplanned)
   action=viewitn_plan&itn=<number>    -> HTML, planned outages in the next 48 hours (excludes a
                                          running one)
@@ -255,7 +257,7 @@ class ErmZapadClient(OperatorClient):
         return await self._cached(f"draw|{code}", fetch)
 
     async def async_get_points(self, client_number: str) -> list[MeteringPoint]:
-        """Metering points of a client number; empty for an unknown number."""
+        """Metering points of a client number; often empty, also for a valid number."""
         body = await self._post({"action": "chkca", "itn": client_number})
         return parse_points(body.decode("utf-8", "replace"))
 

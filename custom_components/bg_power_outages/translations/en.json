@@ -20,7 +20,7 @@
       },
       "client": {
         "title": "Client number",
-        "description": "The 12-digit client number from the electricity bill. Add each client number separately.",
+        "description": "The 12-digit client number from the electricity bill. Add each client number separately. ЕРМ Запад does not confirm that a number exists, so check it carefully.",
         "data": {
           "client_number": "Client number"
         },
@@ -89,8 +89,7 @@
       "rate_limited": "The operator refused the request (request limit reached). Try again later.",
       "invalid_place": "Enter the place name.",
       "invalid_region": "Choose the province.",
-      "invalid_client_number": "The client number must have exactly 12 digits.",
-      "unknown_client_number": "ЕРМ Запад does not know this client number. Check it on the electricity bill."
+      "invalid_client_number": "The client number must have exactly 12 digits."
     },
     "abort": {
       "already_configured": "This client number or place is already configured.",

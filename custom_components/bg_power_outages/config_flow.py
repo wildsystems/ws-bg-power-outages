@@ -185,9 +185,6 @@ class OutageConfigFlow(ConfigFlow, domain=DOMAIN):
         except OutageError:
             errors["base"] = "cannot_connect"
             return None
-        if not points:
-            errors[CONF_CLIENT_NUMBER] = "unknown_client_number"
-            return None
         addresses = list(dict.fromkeys(p.address for p in points if p.address))
         return {
             CONF_OPERATOR: OPERATOR_ERM_ZAPAD,
